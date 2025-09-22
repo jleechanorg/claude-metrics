@@ -5,18 +5,17 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Iterator
-from pydantic import BaseModel
-
-
-class ConversationMessage(BaseModel):
+class ConversationMessage:
     """A single message in a Claude Code conversation."""
     
-    session_id: str
-    timestamp: datetime
-    message_type: str  # "user" or "assistant"
-    content: str
-    cwd: Optional[str] = None
-    git_branch: Optional[str] = None
+    def __init__(self, session_id: str, timestamp: datetime, message_type: str, 
+                 content: str, cwd: Optional[str] = None, git_branch: Optional[str] = None):
+        self.session_id = session_id
+        self.timestamp = timestamp
+        self.message_type = message_type  # "user" or "assistant"
+        self.content = content
+        self.cwd = cwd
+        self.git_branch = git_branch
     
     @classmethod
     def from_jsonl_line(cls, line: str) -> Optional["ConversationMessage"]:
@@ -31,9 +30,17 @@ class ConversationMessage(BaseModel):
             
             # Parse timestamp
             try:
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                if timestamp_str.endswith('Z'):
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                elif '+' in timestamp_str or timestamp_str.endswith('UTC'):
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                else:
+                    # Assume UTC if no timezone info
+                    from datetime import timezone
+                    timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
             except (ValueError, AttributeError):
-                timestamp = datetime.now()
+                from datetime import timezone
+                timestamp = datetime.now(timezone.utc)
             
             # Extract message content
             message_data = data.get("message", {})
@@ -57,16 +64,19 @@ class ConversationMessage(BaseModel):
             return None
 
 
-class Conversation(BaseModel):
+class Conversation:
     """A complete conversation with metadata."""
     
-    session_id: str
-    repository_path: Optional[str]
-    git_branch: Optional[str]
-    start_time: datetime
-    end_time: datetime
-    message_count: int
-    messages: List[ConversationMessage]
+    def __init__(self, session_id: str, repository_path: Optional[str], git_branch: Optional[str],
+                 start_time: datetime, end_time: datetime, message_count: int, 
+                 messages: List[ConversationMessage]):
+        self.session_id = session_id
+        self.repository_path = repository_path
+        self.git_branch = git_branch
+        self.start_time = start_time
+        self.end_time = end_time
+        self.message_count = message_count
+        self.messages = messages
     
     @property
     def duration_minutes(self) -> float:
@@ -175,14 +185,15 @@ class ConversationScanner:
             return None
             
         # Extract number and unit
-        match = re.match(r"(\d+)([dwm])", since.lower())
+        match = re.match(r"(\d+)([dwm])", str(since).lower())
         if not match:
             return None
             
         amount = int(match.group(1))
         unit = match.group(2)
         
-        now = datetime.now()
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
         
         if unit == "d":
             return now - timedelta(days=amount)

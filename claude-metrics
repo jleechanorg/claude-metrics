@@ -1,0 +1,7 @@
+#!/bin/bash
+# Wrapper script for claude-metrics development
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="$SCRIPT_DIR/src"
+
+python3 -c "from claude_metrics.cli import main; main()" "$@"

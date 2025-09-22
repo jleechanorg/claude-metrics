@@ -69,6 +69,10 @@ def scan(repository: Optional[str], since: str, local_only: bool) -> None:
         scanner = ConversationScanner(config.claude_projects_path)
         detector = PatternDetector()
         
+        # Load custom patterns from config
+        patterns_config = config.get_patterns()
+        detector.load_custom_patterns(patterns_config)
+        
         console.print("🔍 Scanning Claude Code conversations...")
         
         conversations = scanner.scan_conversations(
@@ -82,12 +86,18 @@ def scan(repository: Optional[str], since: str, local_only: bool) -> None:
             
         console.print(f"📄 Found {len(conversations)} conversations")
         
+        from datetime import datetime
+        scan_start = datetime.now()
+        
         processed = 0
+        repositories = set()
+        
         for conversation in conversations:
             try:
                 patterns = detector.detect_patterns(conversation)
                 storage.store_conversation_metrics(conversation, patterns)
                 processed += 1
+                repositories.add(conversation.repository_name)
                 
                 if processed % 10 == 0:
                     console.print(f"⏳ Processed {processed}/{len(conversations)} conversations")
@@ -96,7 +106,11 @@ def scan(repository: Optional[str], since: str, local_only: bool) -> None:
                 console.print(f"⚠️  Error processing conversation {conversation.session_id}: {e}")
                 continue
         
+        scan_end = datetime.now()
+        storage.record_scan(scan_start, scan_end, processed, len(repositories))
+        
         console.print(f"✅ Successfully processed {processed} conversations")
+        console.print(f"📁 Found {len(repositories)} repositories")
         console.print("📊 Run 'claude-metrics report' to view insights")
         
     except FileNotFoundError:

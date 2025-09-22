@@ -4,16 +4,17 @@ import os
 from pathlib import Path
 from typing import Optional
 import yaml
-from pydantic import BaseModel
 
 
-class Config(BaseModel):
+class Config:
     """Configuration settings for claude-metrics."""
     
-    config_dir: Path
-    claude_projects_path: Path
-    storage_path: Path
-    scan_interval: str = "5m"
+    def __init__(self, config_dir: Path, claude_projects_path: Path, 
+                 storage_path: Path, scan_interval: str = "5m"):
+        self.config_dir = config_dir
+        self.claude_projects_path = claude_projects_path
+        self.storage_path = storage_path
+        self.scan_interval = scan_interval
     
     @classmethod
     def create_default(cls, config_dir: Optional[str] = None) -> "Config":

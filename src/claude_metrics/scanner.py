@@ -5,18 +5,17 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Iterator
-from pydantic import BaseModel
-
-
-class ConversationMessage(BaseModel):
+class ConversationMessage:
     """A single message in a Claude Code conversation."""
     
-    session_id: str
-    timestamp: datetime
-    message_type: str  # "user" or "assistant"
-    content: str
-    cwd: Optional[str] = None
-    git_branch: Optional[str] = None
+    def __init__(self, session_id: str, timestamp: datetime, message_type: str, 
+                 content: str, cwd: Optional[str] = None, git_branch: Optional[str] = None):
+        self.session_id = session_id
+        self.timestamp = timestamp
+        self.message_type = message_type  # "user" or "assistant"
+        self.content = content
+        self.cwd = cwd
+        self.git_branch = git_branch
     
     @classmethod
     def from_jsonl_line(cls, line: str) -> Optional["ConversationMessage"]:
@@ -57,16 +56,19 @@ class ConversationMessage(BaseModel):
             return None
 
 
-class Conversation(BaseModel):
+class Conversation:
     """A complete conversation with metadata."""
     
-    session_id: str
-    repository_path: Optional[str]
-    git_branch: Optional[str]
-    start_time: datetime
-    end_time: datetime
-    message_count: int
-    messages: List[ConversationMessage]
+    def __init__(self, session_id: str, repository_path: Optional[str], git_branch: Optional[str],
+                 start_time: datetime, end_time: datetime, message_count: int, 
+                 messages: List[ConversationMessage]):
+        self.session_id = session_id
+        self.repository_path = repository_path
+        self.git_branch = git_branch
+        self.start_time = start_time
+        self.end_time = end_time
+        self.message_count = message_count
+        self.messages = messages
     
     @property
     def duration_minutes(self) -> float:

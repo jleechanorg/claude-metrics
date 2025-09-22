@@ -30,9 +30,17 @@ class ConversationMessage:
             
             # Parse timestamp
             try:
-                timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                if timestamp_str.endswith('Z'):
+                    timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                elif '+' in timestamp_str or timestamp_str.endswith('UTC'):
+                    timestamp = datetime.fromisoformat(timestamp_str)
+                else:
+                    # Assume UTC if no timezone info
+                    from datetime import timezone
+                    timestamp = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
             except (ValueError, AttributeError):
-                timestamp = datetime.now()
+                from datetime import timezone
+                timestamp = datetime.now(timezone.utc)
             
             # Extract message content
             message_data = data.get("message", {})
@@ -177,14 +185,15 @@ class ConversationScanner:
             return None
             
         # Extract number and unit
-        match = re.match(r"(\d+)([dwm])", since.lower())
+        match = re.match(r"(\d+)([dwm])", str(since).lower())
         if not match:
             return None
             
         amount = int(match.group(1))
         unit = match.group(2)
         
-        now = datetime.now()
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
         
         if unit == "d":
             return now - timedelta(days=amount)
